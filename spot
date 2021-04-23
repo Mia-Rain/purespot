@@ -1,0 +1,24 @@
+#!/bin/bash
+has() {
+  case "$(command -v $1 2>/dev/null)" in
+    alias*|"") return 1
+  esac
+}
+deps() {
+  deps="curl" # Make sure deps can be found
+  for i in $deps; do
+    has $i || {
+      echo "$i IS MISSING!"; exit 1
+    }
+  done
+# Check for ssl
+  IFS=': '; curl -V | while read fe ex; do 
+    [ "$fe" = "Protocols" ] && {
+      for i in $ex; do
+        [ $i = "https" ] && SSL="-"
+      done
+      [ ! $SSL ] && { echo "CURL LACKS SSL SUPPORT..."; exit 1; }
+    }
+  done
+}
+deps;
