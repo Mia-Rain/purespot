@@ -1,25 +1,6 @@
 #!/bin/sh
 # shellcheck disable=SC2015,SC2086
-has() {
-  case "$(command -v $1 2>/dev/null)" in
-    alias*|"") return 1
-  esac
-}
-deps() {
-  deps="curl" # Make sure deps can be found
-  for i in $deps; do
-    has $i || {
-      echo "$i IS MISSING!"; exit 1
-    }
-  done
-# Check for ssl
-  IFS=': '; curl -V | while read -r fe ex; do 
-    [ "$fe" = "Protocols" ] && {(
-      for i in $ex; do
-        [ "$i" = "https" ] && { return 0; }
-      done
-      return 1;
-    ) && { return 0; } || { echo "SSL MISSING..."; exit 1; };}
-  done
-}
-deps && echo "VALID"
+death() { echo $1; exit 1; }
+has() command -V "$1" >/dev/null 2>&1
+deps() { has curl || death "CURL IS MISSING!"; }
+deps

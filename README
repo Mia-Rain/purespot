@@ -3,7 +3,7 @@
 A pure replacement for Spotbash.
 ----------------
 Dependencies:
-  - curl
+  - curl(with HTTPS)
   - shell
 ----------------
 How?
