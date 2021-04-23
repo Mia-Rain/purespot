@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/bin/sh
+# shellcheck disable=SC2015,SC2086
 has() {
   case "$(command -v $1 2>/dev/null)" in
     alias*|"") return 1
@@ -12,13 +13,13 @@ deps() {
     }
   done
 # Check for ssl
-  IFS=': '; curl -V | while read fe ex; do 
-    [ "$fe" = "Protocols" ] && {
+  IFS=': '; curl -V | while read -r fe ex; do 
+    [ "$fe" = "Protocols" ] && {(
       for i in $ex; do
-        [ $i = "https" ] && SSL="-"
+        [ "$i" = "https" ] && { return 0; }
       done
-      [ ! $SSL ] && { echo "CURL LACKS SSL SUPPORT..."; exit 1; }
-    }
+      return 1;
+    ) && { return 0; } || { echo "SSL MISSING..."; exit 1; };}
   done
 }
-deps;
+deps && echo "VALID"
