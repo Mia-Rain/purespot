@@ -3,26 +3,58 @@
 death() { echo $1; exit 1; }
 has() { command -V "$1" >/dev/null 2>&1 ; } 
 deps() { has curl || death "CURL IS MISSING!"; }
+authF="${XDG_CACHE_HOME:-$HOME/.cache/}/spotbash/authkeys"
 auth() {
-  [ -f "${XDG_CACHE_HOME:-$HOME/.cache/}/spotbash/authkeys" ] && { . "${XDG_CACHE_HOME:-$HOME/.cache/}/spotbash/authkeys"; } || { death "AUTHKEYS FILE MISSING, PLEASE ADD IT TO ${XDG_CACHE_HOME:-$HOME/.cache/}/spotbash/authkeys..."; }
+  [ -f "$authF" ] && { . "$authF"; } || { death "AUTHKEYS FILE MISSING, PLEASE ADD IT TO $authF"; }
   # Fuck you,, not checking for ./authkeys
   IFS=' {}:",'; AC=$(curl -X POST -d grant_type=refresh_token -d refresh_token="$REKEY" -d client_id="$CLID" -d client_secret="$CLSEC" https://accounts.spotify.com/api/token -s) 
-  AUTHKEY=$(echo $AC | while read -r ex val; do
-    [ $ex = "access_token" ] && {
+  AUTHKEY="$(echo $AC | while read -r ex val; do
+    [ $ex = 'access_token' ] && {
       echo $val | while read -r AUTHKEY ex; do     
         echo $AUTHKEY
       done
     }
-  done)
+  done)"
   unset IFS
 }
 get_info() {
   inf=$(curl -s -X "GET" "https://api.spotify.com/v1/me/player" -H "Accept: application/json" -H "Content-Type: application/json" -H "Authorization: Bearer $AUTHKEY")
+  [ "$1" ] && echo "$inf"
 }
 id() {
   IFS=' {}:",[]'; unid=$(curl -X "GET" "https://api.spotify.com/v1/me/player/devices" -H "Accept: application/json" -H "Content-Type: application/json" -H "Authorization: Bearer  $AUTHKEY" -s)
   id=$(echo $unid | while read -r name val; do
     [ "$name" = "id" ] && echo $val
   done)
+  unset IFS
 }
-auth; get_info; id
+pause(){
+  curl -X PUT -s -d device_id="$id" -H "Accept: application/json" -H "Content-Type: application/json" -H "Authorization: Bearer $AUTHKEY" https://api.spotify.com/v1/me/player/pause
+}
+resume(){
+  curl -s --fail -X PUT --data "{}" -H "Accept: application/json" -H "Content-Type: application/json" -H "Authorization: Bearer $AUTHKEY" https://api.spotify.com/v1/me/player/play
+}
+deps
+case $1 in
+  auth)
+    auth; echo $AUTHKEY; exit 0
+  ;;
+  get_info)
+    auth; get_info _; exit 0
+  ;;
+  "")
+    help; exit 1
+  ;;
+  *)
+    auth; get_info; id
+    type ${1} 2>&1 >/dev/null && {
+      ${1} "$@" || {
+        echo "Whoops! Something went wrong..."
+      } && {
+        exit 0
+      }
+    } || {
+      help; exit 1
+    }
+  ;;
+esac
